@@ -14,11 +14,13 @@ jobs:
       with:
         node-version: lts/*
     - name: Install dependencies
-      run: npm ci
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test
+      run: npm install
+    - name: Run App Fully
+      run: npm run dev
+    - name: Run Backend Tests
+      run: npm run test-api
+    - name: Run E2E Tests
+      run: npm run test-e2e
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
