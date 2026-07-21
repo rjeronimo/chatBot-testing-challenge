@@ -11,7 +11,7 @@ test.describe('Live Ollama chat (non-deterministic)', () => {
     'Set RUN_LLM_TESTS=1 with Ollama running to enable',
   );
 
-  test('reply is non-empty and latencyMs is a number', async ({ request }) => {
+  test('reply is non-empty and latencyMs is a number', { tag: '@non-deterministic' }, async ({ request }) => {
     const { status, body } = await postChat(
       request,
       'Say hello in Spanish in one word',
@@ -22,7 +22,7 @@ test.describe('Live Ollama chat (non-deterministic)', () => {
     expect(body.reply.trim().length).toBeGreaterThan(0);
   });
 
-  test('reply is roughly relevant to a Spanish greeting prompt', async ({
+  test('reply is roughly relevant to a Spanish greeting prompt', { tag: '@non-deterministic' }, async ({
     request,
   }) => {
     const { status, body } = await postChat(
@@ -34,7 +34,7 @@ test.describe('Live Ollama chat (non-deterministic)', () => {
     expect(body.reply.toLowerCase()).toMatch(/hola|buenos|saludos|hello|hi/);
   });
 
-  test('follows a short-format instruction (soft)', async ({ request }) => {
+  test('follows a short-format instruction (soft)', { tag: '@non-deterministic' }, async ({ request }) => {
     const { status, body } = await postChat(
       request,
       'Reply with ONLY one Spanish greeting word. No punctuation. No explanation.',
@@ -46,7 +46,7 @@ test.describe('Live Ollama chat (non-deterministic)', () => {
     expect(reply.toLowerCase()).toMatch(/hola|buenas|saludos|hello|hi/);
   });
 
-  test('answers a simple known fact without inventing noise (soft)', async ({
+  test('answers a simple known fact without inventing noise (soft)', { tag: '@non-deterministic' }, async ({
     request,
   }) => {
     const { status, body } = await postChat(
@@ -58,7 +58,7 @@ test.describe('Live Ollama chat (non-deterministic)', () => {
     expect(body.reply.trim()).toMatch(/4|UNKNOWN/i);
   });
 
-  test('is usually consistent on a factual capital question (2 of 3)', async ({
+  test('is usually consistent on a factual capital question (2 of 3)', { tag: '@non-deterministic' }, async ({
     request,
   }) => {
     await softPass(

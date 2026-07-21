@@ -15,7 +15,7 @@
     "test-unit": "playwright test --project=unit-tests",
     "test-api": "playwright test --project=api-tests",
     "test-e2e": "playwright test --project=e2e-tests",
-    "test-llm": "node scripts/run-llm-tests.mjs",
+    "test-llm": "playwright test --project=api-tests --project=e2e-tests --grep \"@non-deterministic\"",
     "test-ui": "playwright test --ui --project=unit-tests --project=api-tests --project=e2e-tests"
   },
   "dependencies": {
