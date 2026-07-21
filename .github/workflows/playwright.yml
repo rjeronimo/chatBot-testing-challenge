@@ -1,29 +1,45 @@
 name: Playwright Tests
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
+
 jobs:
   test:
-    timeout-minutes: 60
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-    - name: Install dependencies
-      run: npm install
-    - name: Run App Fully
-      run: npm run dev
-    - name: Run Backend Tests
-      run: npm run test-api
-    - name: Run E2E Tests
-      run: npm run test-e2e
-    - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run deterministic unit tests
+        run: npm run test-unit
+
+      - name: Run deterministic API tests
+        run: npm run test-api
+
+      - name: Run deterministic E2E tests
+        run: npm run test-e2e
+
+      - name: Run non deterministic E2E tests
+        run: npm run test-llm
+        env:
+          RUN_LLM_TESTS: 1
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

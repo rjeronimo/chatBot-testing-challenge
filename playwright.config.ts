@@ -33,9 +33,24 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
 
-  /* Configure projects for major browsers */
   projects: [
-    // E2E tests
+    {
+      name: 'unit-tests',
+      testMatch: '**/unit/*.spec.ts',
+    },
+    {
+      name: 'api-tests',
+      testMatch: '**/api/*.spec.ts',
+      // Deterministic API suites host their own Express app via startTestApp().
+      // Live LLM cases use this baseURL when RUN_LLM_TESTS=1.
+      use: {
+        baseURL: 'http://localhost:3001',
+        extraHTTPHeaders: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+      },
+    },
     {
       name: 'e2e-tests',
       testMatch: '**/e2e/*.spec.ts',
@@ -44,51 +59,20 @@ export default defineConfig({
         baseURL: 'http://localhost:5173',
       },
     },
-    // Backend tests
-    {
-      name: 'api-tests',
-      testMatch: '**/api/*.spec.ts',
-      use: {
-        baseURL: 'http://localhost:3001',
-        extraHTTPHeaders: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      },
-    }
-    /*    
-         Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
   ],
 
-  //Run your local dev server before starting the tests 
-  /*webServer: [{
-    command: 'npm run dev:server',
-    url: 'http://localhost:3001',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
-  {
-    command: 'npm run dev:web',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },]*/
+  webServer: [
+    {
+      command: 'npm run dev:server',
+      url: 'http://localhost:3001/api/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+    {
+      command: 'npm run dev:web',
+      url: 'http://localhost:5173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+  ],
 });

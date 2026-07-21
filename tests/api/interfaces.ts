@@ -1,5 +1,6 @@
 export interface HealthResponse {
   status: string;
+  model: string;
 }
 
 export interface ChatSuccessResponse {

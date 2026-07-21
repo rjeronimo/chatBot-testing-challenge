@@ -62,9 +62,15 @@ During local development:
 │       ├── index.html
 │       ├── main.tsx
 │       └── styles.css
+├── tests/
+│   ├── unit/
+│   ├── api/
+│   └── e2e/
 ├── .env.example
+├── .github/workflows/playwright.yml
 ├── .npmrc
 ├── package.json
+├── playwright.config.ts
 ├── tsconfig.json
 ├── tsconfig.build.json
 └── vite.config.ts
@@ -374,6 +380,166 @@ not peak model quality.
 These behaviors are part of the app reality and are relevant for API, UI, and
 non-deterministic testing scenarios.
 
+## Testing solution
+
+This fork adds a Playwright-based test framework around the chatbot app. The
+design goal is to keep **contract and UI behavior deterministic** (no live
+model required), and to isolate **live Ollama checks** behind an explicit flag
+so CI stays stable.
+
+### What was implemented
+
+| Layer | Location | Purpose |
+| ---- | ---- | ---- |
+| Unit | `tests/unit/` | Pure logic for `validateMessage` and `withTimeout` |
+| API (deterministic) | `tests/api/` | HTTP contracts and error mapping via injected `generate` |
+| E2E (deterministic) | `tests/e2e/` | Chat UI flow with `page.route` API mocks |
+| LLM (non-deterministic) | same API/E2E files, gated | Soft relevance / non-empty reply against live Ollama |
+
+### Deterministic vs non-deterministic
+
+**Deterministic (default CI / `npm test`):**
+
+- Status codes, JSON shapes, validation errors
+- Upstream failure mapping (`503`, `429`, `504`, `502`) using `createApp({ generate })`
+  instead of mocking `/api/chat` itself — this asserts the real Express behavior
+- UI send/history/error rendering with mocked `/api/chat`
+
+**Non-deterministic (opt-in):**
+
+- Enabled with `RUN_LLM_TESTS=1`
+- Asserts non-empty replies and soft relevance (regex / keyword family), not
+  exact strings like `"Hola"` only
+- Expect flakiness variance by model and hardware; do not gate merges on these
+
+### Why inject `generate` for API faults?
+
+Mocking `POST /api/chat` only proves the mock works. The backend already accepts
+an injectable generator (`AppOptions.generate`). Tests start a real Express app
+on an ephemeral port (`tests/api/testApp.ts`) and throw upstream-style errors
+from the injected function, which verifies status mapping in `src/backend/app.ts`.
+
+### How to run tests
+
+Prerequisites: Node.js 20+, `npm install`, then once:
+
+```bash
+npx playwright install chromium
+```
+
+#### Test environment variables
+
+Deterministic suites (`npm test`, `test-unit`, `test-api`, `test-e2e`, `test-ui`)
+do **not** require any special test flags. Optional app settings still come from
+`.env` when Playwright starts (or reuses) the backend:
+
+```bash
+cp .env.example .env
+```
+
+Example `.env` (same as app runtime):
+
+```env
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:3b-instruct
+PORT=3001
+REQUEST_TIMEOUT_MS=20000
+```
+
+| Variable | Required for | Example | Notes |
+| ---- | ---- | ---- | ---- |
+| _(none)_ | `npm test` / deterministic suites | — | Defaults work; `.env` optional |
+| `RUN_LLM_TESTS` | Live LLM suites only | `1` | Set automatically by `npm run test-llm` |
+| `OLLAMA_BASE_URL` | Live LLM + real backend | `http://localhost:11434` | From `.env` / shell |
+| `OLLAMA_MODEL` | Live LLM + real backend | `qwen2.5:3b-instruct` | Must exist in `ollama list` |
+| `PORT` | App / E2E webServer | `3001` | Must match Playwright `baseURL` |
+| `REQUEST_TIMEOUT_MS` | Slow local models | `20000` or higher | Raise if live chats time out |
+| `CI` | GitHub Actions (automatic) | `true` | Do not set locally unless mimicking CI |
+
+Examples:
+
+```bash
+# Deterministic — no test env vars needed
+npm test
+
+# Live LLM — preferred (script sets RUN_LLM_TESTS=1 for you)
+npm run test-llm
+
+# Live LLM — manual equivalent (macOS / Linux)
+RUN_LLM_TESTS=1 npx playwright test --project=api-tests --project=e2e-tests --grep non-deterministic
+
+# Live LLM — manual equivalent (Windows PowerShell)
+$env:RUN_LLM_TESTS = "1"
+npx playwright test --project=api-tests --project=e2e-tests --grep non-deterministic
+
+# Optional: point live tests at a different local model
+OLLAMA_MODEL=phi3:mini npm run dev
+# then in another terminal:
+npm run test-llm
+```
+
+More detail: [docs/process-env.md](docs/process-env.md).
+
+**Recommended local workflow**
+
+1. Start the app (optional but convenient — Playwright will reuse it):
+
+```bash
+npm run dev
+```
+
+2. In another terminal, run suites:
+
+```bash
+npm run test-unit
+npm run test-api
+npm run test-e2e
+# or all deterministic layers:
+npm test
+```
+
+If the app is not already running, Playwright’s `webServer` config starts
+backend + Vite automatically and shuts them down when tests finish.
+
+Interactive UI (all projects: unit, api, e2e):
+
+```bash
+npm run test-ui
+```
+
+In the Playwright UI sidebar, make sure **unit-tests**, **api-tests**, and
+**e2e-tests** are all selected (project filter).
+
+Live LLM suites (Ollama running, model pulled, `.env` configured):
+
+```bash
+npm run test-llm
+```
+
+Notes:
+
+- Deterministic API tests still host an in-process Express app via
+  `tests/api/testApp.ts` (injected `generate`). They do not need Ollama.
+- E2E deterministic tests mock `/api/chat` in the browser and need the Vite UI.
+- CI (`.github/workflows/playwright.yml`) runs only the deterministic projects.
+- See [docs/process-env.md](docs/process-env.md) for `CI` / `RUN_LLM_TESTS`.
+
+### Project layout (tests)
+
+```text
+tests/
+├── unit/
+│   ├── validation.spec.ts
+│   └── timeout.spec.ts
+├── api/
+│   ├── testApp.ts              # createApp + ephemeral server helper
+│   ├── interfaces.ts
+│   ├── chat.spec.ts            # health, success contract, 400s + gated LLM
+│   └── chat-edgeCases.spec.ts  # 503/429/504/502 mapping
+└── e2e/
+    └── chat.spec.ts            # mocked UI flow + gated live UI
+```
+
 ## Challenge instructions
 
 This repository is the base app for a testing challenge.
@@ -385,10 +551,12 @@ cover both deterministic and non-deterministic LLM behavior.
 
 ### Expected approach
 
-The candidate should create either:
+Prefer a layered suite:
 
-- a fork of this repository, or
-- a separate repository containing the app plus the testing framework.
+1. Unit-test pure helpers without HTTP or a model.
+2. API-test Express contracts with an injected generator for deterministic faults.
+3. E2E-test the chat UI with network mocks for stable UX assertions.
+4. Keep live-model checks optional, soft, and clearly labeled.
 
 ### Suggested testing scope
 
@@ -411,16 +579,12 @@ The challenge encourages AI-assisted tooling to:
 
 ### Deliverables
 
-The candidate should provide:
+- Playwright projects for unit, API, and E2E coverage
+- Clear scripts in `package.json` (`test`, `test-unit`, `test-api`, `test-e2e`, `test-llm`)
+- CI workflow that runs deterministic tests only
+- This README section describing strategy, runbooks, and LLM handling
 
-1. URL of fork/derived repository with solution.
-2. Clear setup instructions.
-3. Clear commands to execute tests.
-4. Documentation of strategy, coverage, assumptions, and tradeoffs.
-
-### README expectations for candidate solution
-
-Candidate should either:
+### README expectations
 
 - rewrite this README to include testing solution, or
 - extend it with a dedicated testing section.
@@ -430,7 +594,7 @@ non-deterministic behavior was handled.
 
 ## Review checklist
 
-When reviewing candidate solution, verify:
+When reviewing solution, verify:
 
 - app still runs locally
 - framework is easy to install and execute
