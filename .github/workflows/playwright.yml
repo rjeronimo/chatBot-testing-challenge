@@ -30,7 +30,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Run deterministic unit tests
+      - name: Run unit tests
         run: npm run test-unit
 
       - name: Run deterministic API tests
