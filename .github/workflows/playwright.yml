@@ -4,6 +4,13 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      run_non_deterministic_e2e:
+        description: 'Run non-deterministic E2E tests'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   test:
@@ -32,10 +39,11 @@ jobs:
       - name: Run deterministic E2E tests
         run: npm run test-e2e
 
-      - name: Run non deterministic E2E tests
-        run: npm run test-llm
+      - name: Run non-deterministic E2E tests
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_non_deterministic_e2e }}
         env:
-          RUN_LLM_TESTS: 1
+          RUN_LLM_TESTS: '1'
+        run: npx playwright test --project=e2e-tests --grep "@non-deterministic"
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}

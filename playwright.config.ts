@@ -41,7 +41,7 @@ export default defineConfig({
     {
       name: 'api-tests',
       testMatch: '**/api/*.spec.ts',
-      // Deterministic API suites host their own Express app via startTestApp().
+      // Deterministic API suites use Supertest + createApp({ generate }).
       // Live LLM cases use this baseURL when RUN_LLM_TESTS=1.
       use: {
         baseURL: 'http://localhost:3001',

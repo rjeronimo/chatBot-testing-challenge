@@ -29,4 +29,21 @@ test.describe('Chatbot UI (non-deterministic / live LLM)', () => {
     const botMessages = page.locator('.msg-bot p');
     await expect(botMessages.last()).toHaveText(/hola|buenos|saludos|hello|hi/i);
   });
+
+  test('handles complex technical questions', async ({ page }) => {
+    const complexQuestions = [
+      '¿Cómo funciona la teoría de la relatividad?',
+      'Explica el concepto de machine learning',
+      '¿Qué es la computación cuántica?'
+    ];
+    
+    for (const question of complexQuestions) {
+      await askChatbot(page, question);
+      const botMessages = page.locator('.msg-bot p');
+      const response = await botMessages.last().textContent() || '';
+      
+      expect(response.length).toBeGreaterThan(50);
+    }
+  });
+
 });

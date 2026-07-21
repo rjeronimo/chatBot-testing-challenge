@@ -415,9 +415,9 @@ so CI stays stable.
 ### Why inject `generate` for API faults?
 
 Mocking `POST /api/chat` only proves the mock works. The backend already accepts
-an injectable generator (`AppOptions.generate`). Tests start a real Express app
-on an ephemeral port (`tests/api/testApp.ts`) and throw upstream-style errors
-from the injected function, which verifies status mapping in `src/backend/app.ts`.
+an injectable generator (`AppOptions.generate`). Tests use Supertest against
+`createApp({ generate })` and throw upstream-style errors from the injected
+function, which verifies status mapping in `src/backend/app.ts`.
 
 ### How to run tests
 
@@ -516,8 +516,8 @@ npm run test-llm
 
 Notes:
 
-- Deterministic API tests still host an in-process Express app via
-  `tests/api/testApp.ts` (injected `generate`). They do not need Ollama.
+- Deterministic API tests use Supertest against `createApp({ generate })`.
+  They do not need Ollama.
 - E2E deterministic tests mock `/api/chat` in the browser and need the Vite UI.
 - CI (`.github/workflows/playwright.yml`) runs only the deterministic projects.
 - See [docs/process-env.md](docs/process-env.md) for `CI` / `RUN_LLM_TESTS`.
@@ -530,15 +530,13 @@ tests/
 │   ├── validation.spec.ts
 │   └── timeout.spec.ts
 ├── api/
-│   ├── chat-deterministic-injection.spec.ts
-|   ├── chat-deterministic.spec.ts
-|   ├── chat-non-deterministic.spec.ts
-│   ├── testApp.ts
+│   ├── chat-deterministic.spec.ts
+│   ├── chat-non-deterministic.spec.ts
 │   ├── interfaces.ts
-│   ├── llmHelpers.ts
+│   └── llmHelpers.ts
 └── e2e/
     ├── chat-deterministic.spec.ts
-    └── chat-non-deterministic.spec.ts
+    ├── chat-non-deterministic.spec.ts
     └── helpers.ts
 ```
 

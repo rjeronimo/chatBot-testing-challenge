@@ -18,6 +18,8 @@ test.describe('Live Ollama chat (non-deterministic)', () => {
     );
 
     expect(status).toBe(200);
+    expect(body).toHaveProperty('latencyMs');
+    expect(body).toHaveProperty('reply');
     expect(typeof body.latencyMs).toBe('number');
     expect(body.reply.trim().length).toBeGreaterThan(0);
   });
