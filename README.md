@@ -478,8 +478,6 @@ OLLAMA_MODEL=phi3:mini npm run dev
 npm run test-llm
 ```
 
-More detail: [docs/process-env.md](docs/process-env.md).
-
 **Recommended local workflow**
 
 1. Start the app (optional but convenient — Playwright will reuse it):
@@ -532,12 +530,16 @@ tests/
 │   ├── validation.spec.ts
 │   └── timeout.spec.ts
 ├── api/
-│   ├── testApp.ts              # createApp + ephemeral server helper
+│   ├── chat-deterministic-injection.spec.ts
+|   ├── chat-deterministic.spec.ts
+|   ├── chat-non-deterministic.spec.ts
+│   ├── testApp.ts
 │   ├── interfaces.ts
-│   ├── chat.spec.ts            # health, success contract, 400s + gated LLM
-│   └── chat-edgeCases.spec.ts  # 503/429/504/502 mapping
+│   ├── llmHelpers.ts
 └── e2e/
-    └── chat.spec.ts            # mocked UI flow + gated live UI
+    ├── chat-deterministic.spec.ts
+    └── chat-non-deterministic.spec.ts
+    └── helpers.ts
 ```
 
 ## Challenge instructions

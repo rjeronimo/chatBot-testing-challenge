@@ -141,6 +141,3 @@ test.describe('Chatbot UI (deterministic)', () => {
     await expect(page.getByText('recovered reply')).toBeVisible();
   });
 });
-
-
-
